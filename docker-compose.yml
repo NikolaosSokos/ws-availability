@@ -8,6 +8,7 @@ services:
     ports:
       - 6379:6379
     command: redis-server --save 20 1 --loglevel warning
+
   cacher:
     build:
       context: ./
@@ -64,5 +65,26 @@ services:
       nproc: 65535
     security_opt:
       - seccomp:unconfined
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    build:
+      context: ./
+      dockerfile: Dockerfile.worker
+    container_name: fdsnws-availability-worker
+    restart: always
+    depends_on:
+      - cache
+    environment:
+      RUNMODE: production
+      # Database connection
+      MONGODB_HOST: host.docker.internal
+      MONGODB_PORT: 27017
+      MONGODB_USR: wfrepouser
+      MONGODB_PWD: 2023wf
+      MONGODB_NAME: wfrepo
+    ulimits:
+      nproc: 65535
     extra_hosts:
       - "host.docker.internal:host-gateway"
