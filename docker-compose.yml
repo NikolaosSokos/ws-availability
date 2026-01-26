@@ -34,6 +34,8 @@ services:
       nproc: 65535
     security_opt:
       - seccomp:unconfined
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   api:
     build:
       context: ./
@@ -47,7 +49,7 @@ services:
     environment:
       RUNMODE: production
       # Gateway IP (Update if needed)
-      MONGODB_HOST: ${MONGODB_HOST:-172.17.0.1}
+      MONGODB_HOST: ${MONGODB_HOST:-host.docker.internal}
       MONGODB_PORT: ${MONGODB_PORT:-27017}
       MONGODB_USR: ${MONGODB_USR:-wfrepouser}
       MONGODB_PWD: ${MONGODB_PWD:-2023wf}
@@ -62,3 +64,5 @@ services:
       nproc: 65535
     security_opt:
       - seccomp:unconfined
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
