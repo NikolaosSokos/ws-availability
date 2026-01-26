@@ -26,6 +26,8 @@ services:
       - cache
     environment:
       RUNMODE: production
+    ulimits:
+      nproc: 65535
 
   api:
     build:
@@ -45,6 +47,8 @@ services:
       MONGODB_USR: wfrepouser
       MONGODB_PWD: 2023wf
       MONGODB_NAME: wfrepo
+    ulimits:
+      nproc: 65535
 
   worker:
     build:

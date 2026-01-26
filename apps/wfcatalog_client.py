@@ -66,6 +66,9 @@ def mongo_request(paramslist: list[dict]) -> tuple[list[dict], list[list[Any]]]:
         username=db_usr,
         password=db_pwd,
         authSource=db_name,
+        maxPoolSize=1,
+        connect=False,
+        directConnection=True
     )
     db = client.get_database(db_name)
     
