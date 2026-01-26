@@ -41,110 +41,113 @@ def run_etl(networks=".*", stations=".*", start_date=None, end_date=None, days_b
     logger.info(f"Scope: Net={networks}, Sta={stations}")
     logger.info(f"Time:  {start_date} -> {end_date}")
 
-    # Filters matching main.js
-    # ts >= start AND te <= end
-    match_filter = {
-        "net": {"$regex": networks},
-        "sta": {"$regex": stations},
-        "ts": {"$gte": start_date},
-        "te": {"$lte": end_date}
-    }
+    with get_mongo_client() as client:
+        db = client[settings.mongodb_name]
 
-    # ---------------------------------------------------------
-    # STEP 1: DELETE BEFORE WRITE (Fix for Issue 27)
-    # ---------------------------------------------------------
-    # We must delete any existing availability records that we are about to re-generate.
-    # This ensures that if WFCatalog re-generated IDs, the old ones (with old IDs) are gone.
-    logger.info("Cleaning up existing availability data...")
-    del_result = db.availability.delete_many(match_filter)
-    logger.info(f"Deleted {del_result.deleted_count} existing documents.")
-
-    # ---------------------------------------------------------
-    # STEP 2: Process Daily Streams (Avail >= 100)
-    # ---------------------------------------------------------
-    logger.info("Aggregating Daily Streams (Avail >= 100)...")
-    pipeline_daily = [
-        {
-            "$match": {
-                **match_filter,
-                "avail": {"$gte": 100}
-            }
-        },
-        {
-            "$group": {
-                "_id": "$_id",
-                "net": {"$first": "$net"},
-                "sta": {"$first": "$sta"},
-                "loc": {"$first": "$loc"},
-                "cha": {"$first": "$cha"},
-                "qlt": {"$first": "$qlt"},
-                "srate": {"$first": {"$arrayElemAt": ["$srate", 0]}},
-                "ts": {"$first": "$ts"},
-                "te": {"$first": "$te"},
-                "created": {"$first": "$created"},
-                "restr": {"$first": "OPEN"},
-                "count": {"$first": 1}
-            }
+        # Filters matching main.js
+        # ts >= start AND te <= end
+        match_filter = {
+            "net": {"$regex": networks},
+            "sta": {"$regex": stations},
+            "ts": {"$gte": start_date},
+            "te": {"$lte": end_date}
         }
-    ]
-    
-    docs_daily = list(db.daily_streams.aggregate(pipeline_daily))
-    if docs_daily:
-        # Use bulk operations for performance and safety
-        # Although we deleted, we use upsert=True just in case to be robust
-        ops = [UpdateOne({"_id": d["_id"]}, {"$set": d}, upsert=True) for d in docs_daily]
-        if ops:
-            res = db.availability.bulk_write(ops)
-            logger.info(f"Daily Streams: Matched {res.matched_count}, Inserted {res.upserted_count}, Modified {res.modified_count}")
-    else:
-        logger.info("No Daily Streams found.")
 
-    # ---------------------------------------------------------
-    # STEP 3: Process Continuous Streams (Avail < 100)
-    # ---------------------------------------------------------
-    logger.info("Aggregating Continuous Streams (Avail < 100)...")
-    pipeline_continuous = [
-        {
-            "$match": {
-                **match_filter,
-                "avail": {"$lt": 100}
+        # ---------------------------------------------------------
+        # STEP 1: DELETE BEFORE WRITE (Fix for Issue 27)
+        # ---------------------------------------------------------
+        # We must delete any existing availability records that we are about to re-generate.
+        # This ensures that if WFCatalog re-generated IDs, the old ones (with old IDs) are gone.
+        logger.info("Cleaning up existing availability data...")
+        del_result = db.availability.delete_many(match_filter)
+        logger.info(f"Deleted {del_result.deleted_count} existing documents.")
+
+        # ---------------------------------------------------------
+        # STEP 2: Process Daily Streams (Avail >= 100)
+        # ---------------------------------------------------------
+        logger.info("Aggregating Daily Streams (Avail >= 100)...")
+        pipeline_daily = [
+            {
+                "$match": {
+                    **match_filter,
+                    "avail": {"$gte": 100}
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$_id",
+                    "net": {"$first": "$net"},
+                    "sta": {"$first": "$sta"},
+                    "loc": {"$first": "$loc"},
+                    "cha": {"$first": "$cha"},
+                    "qlt": {"$first": "$qlt"},
+                    "srate": {"$first": {"$arrayElemAt": ["$srate", 0]}},
+                    "ts": {"$first": "$ts"},
+                    "te": {"$first": "$te"},
+                    "created": {"$first": "$created"},
+                    "restr": {"$first": "OPEN"},
+                    "count": {"$first": 1}
+                }
             }
-        },
-        {
-            "$lookup": {
-                "from": "c_segments",
-                "localField": "_id",
-                "foreignField": "streamId",
-                "as": "c_segments"
+        ]
+        
+        docs_daily = list(db.daily_streams.aggregate(pipeline_daily))
+        if docs_daily:
+            # Use bulk operations for performance and safety
+            # Although we deleted, we use upsert=True just in case to be robust
+            ops = [UpdateOne({"_id": d["_id"]}, {"$set": d}, upsert=True) for d in docs_daily]
+            if ops:
+                res = db.availability.bulk_write(ops)
+                logger.info(f"Daily Streams: Matched {res.matched_count}, Inserted {res.upserted_count}, Modified {res.modified_count}")
+        else:
+            logger.info("No Daily Streams found.")
+
+        # ---------------------------------------------------------
+        # STEP 3: Process Continuous Streams (Avail < 100)
+        # ---------------------------------------------------------
+        logger.info("Aggregating Continuous Streams (Avail < 100)...")
+        pipeline_continuous = [
+            {
+                "$match": {
+                    **match_filter,
+                    "avail": {"$lt": 100}
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "c_segments",
+                    "localField": "_id",
+                    "foreignField": "streamId",
+                    "as": "c_segments"
+                }
+            },
+            {"$unwind": "$c_segments"},
+            {
+                "$group": {
+                    "_id": "$c_segments._id",
+                    "net": {"$first": "$net"},
+                    "sta": {"$first": "$sta"},
+                    "loc": {"$first": "$loc"},
+                    "cha": {"$first": "$cha"},
+                    "qlt": {"$first": "$qlt"},
+                    "srate": {"$first": "$c_segments.srate"},
+                    "ts": {"$first": "$c_segments.ts"},
+                    "te": {"$first": "$c_segments.te"},
+                    "created": {"$first": "$created"},
+                    "restr": {"$first": "OPEN"},
+                    "count": {"$first": 1}
+                }
             }
-        },
-        {"$unwind": "$c_segments"},
-        {
-            "$group": {
-                "_id": "$c_segments._id",
-                "net": {"$first": "$net"},
-                "sta": {"$first": "$sta"},
-                "loc": {"$first": "$loc"},
-                "cha": {"$first": "$cha"},
-                "qlt": {"$first": "$qlt"},
-                "srate": {"$first": "$c_segments.srate"},
-                "ts": {"$first": "$c_segments.ts"},
-                "te": {"$first": "$c_segments.te"},
-                "created": {"$first": "$created"},
-                "restr": {"$first": "OPEN"},
-                "count": {"$first": 1}
-            }
-        }
-    ]
-    
-    docs_cont = list(db.daily_streams.aggregate(pipeline_continuous))
-    if docs_cont:
-        ops = [UpdateOne({"_id": d["_id"]}, {"$set": d}, upsert=True) for d in docs_cont]
-        if ops:
-            res = db.availability.bulk_write(ops)
-            logger.info(f"Continuous Streams: Matched {res.matched_count}, Inserted {res.upserted_count}, Modified {res.modified_count}")
-    else:
-        logger.info("No Continuous Streams found.")
+        ]
+        
+        docs_cont = list(db.daily_streams.aggregate(pipeline_continuous))
+        if docs_cont:
+            ops = [UpdateOne({"_id": d["_id"]}, {"$set": d}, upsert=True) for d in docs_cont]
+            if ops:
+                res = db.availability.bulk_write(ops)
+                logger.info(f"Continuous Streams: Matched {res.matched_count}, Inserted {res.upserted_count}, Modified {res.modified_count}")
+        else:
+            logger.info("No Continuous Streams found.")
     
     logger.info("ETL Job Completed.")
 
