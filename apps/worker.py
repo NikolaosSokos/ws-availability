@@ -18,7 +18,10 @@ def get_mongo_client():
         password=settings.mongodb_pwd,
         authSource=settings.mongodb_name,
         maxPoolSize=1,
-        connect=False
+        connect=False,
+        directConnection=True,
+        retryReads=False,
+        retryWrites=False
     )
 
 def run_etl(networks=".*", stations=".*", start_date=None, end_date=None, days_back=1):
@@ -28,9 +31,6 @@ def run_etl(networks=".*", stations=".*", start_date=None, end_date=None, days_b
     2. Aggregates data from daily_streams / c_segments.
     3. Inserts fresh data into availability.
     """
-    client = get_mongo_client()
-    db = client[settings.mongodb_name]
-    
     # Calculate dates if not provided
     # Default to "Yesterday" (00:00 to 00:00 next day)
     if start_date is None:

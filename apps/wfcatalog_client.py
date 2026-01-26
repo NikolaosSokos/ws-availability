@@ -60,7 +60,8 @@ def mongo_request(paramslist: list[dict]) -> tuple[list[dict], list[list[Any]]]:
     qries = []
     
     # Initialize DB connection ONCE (Fix for Connection Churn)
-    client = MongoClient(
+    # Initialize DB connection ONCE (Fix for Connection Churn)
+    with MongoClient(
         db_host,
         db_port,
         username=db_usr,
@@ -68,47 +69,49 @@ def mongo_request(paramslist: list[dict]) -> tuple[list[dict], list[list[Any]]]:
         authSource=db_name,
         maxPoolSize=1,
         connect=False,
-        directConnection=True
-    )
-    db = client.get_database(db_name)
-    
-    for params in paramslist:
-        params = _expand_wildcards(params)
-        # Crop datetimes to accomodate sub-segment queries.
-        # e.g. net=NL&sta=HGN&start=2018-01-06T06:00:00&end=2018-01-06T12:00:00
-        # when we have one 24h segment for 2018-01-06
-        start, end = crop_datetimes(params)
-        qry = {}
-        if params["network"] != "*":
-            network = {"$in": params["network"].split(",")}
-            qry["net"] = network
-        if params["station"] != "*":
-            station = {"$in": params["station"].split(",")}
-            qry["sta"] = station
-        if params["location"] != "*":
-            location = {"$in": params["location"].split(",")}
-            qry["loc"] = location
-        if params["channel"] != "*":
-            qry["cha"] = {"$in": params["channel"].split(",")}
-        if params["quality"] != "*":
-            quality = {"$in": params["quality"].split(",")}
-            qry["qlt"] = quality
-        if start:
-            ts = {"$gte": start}
-            qry["ts"] = ts
-        if end:
-            te = {"$lte": end}
-            qry["te"] = te
+        directConnection=True,
+        retryReads=False,
+        retryWrites=False
+    ) as client:
+        db = client.get_database(db_name)
+        
+        for params in paramslist:
+            params = _expand_wildcards(params)
+            # Crop datetimes to accomodate sub-segment queries.
+            # e.g. net=NL&sta=HGN&start=2018-01-06T06:00:00&end=2018-01-06T12:00:00
+            # when we have one 24h segment for 2018-01-06
+            start, end = crop_datetimes(params)
+            qry = {}
+            if params["network"] != "*":
+                network = {"$in": params["network"].split(",")}
+                qry["net"] = network
+            if params["station"] != "*":
+                station = {"$in": params["station"].split(",")}
+                qry["sta"] = station
+            if params["location"] != "*":
+                location = {"$in": params["location"].split(",")}
+                qry["loc"] = location
+            if params["channel"] != "*":
+                qry["cha"] = {"$in": params["channel"].split(",")}
+            if params["quality"] != "*":
+                quality = {"$in": params["quality"].split(",")}
+                qry["qlt"] = quality
+            if start:
+                ts = {"$gte": start}
+                qry["ts"] = ts
+            if end:
+                te = {"$lte": end}
+                qry["te"] = te
 
-        qries.append(qry)
+            qries.append(qry)
 
-        cursor = db.availability.find(qry, projection=PROJ)
+            cursor = db.availability.find(qry, projection=PROJ)
 
-        # Eager query execution instead of a cursor
-        result += _apply_restricted_bit(cursor, params.get("includerestricted", False))
+            # Eager query execution instead of a cursor
+            result += _apply_restricted_bit(cursor, params.get("includerestricted", False))
 
-    # Result needs to be sorted, this seems to be required by the fusion step
-    result.sort(key=lambda x: (x[0], x[1], x[2], x[3], x[4]))
+        # Result needs to be sorted, this seems to be required by the fusion step
+        result.sort(key=lambda x: (x[0], x[1], x[2], x[3], x[4]))
 
     return qries, result
 
