@@ -64,7 +64,3 @@ services:
       MONGODB_NAME: wfrepo
     ulimits:
       nproc: 65535
-    deploy:
-      resources:
-        limits:
-          pids: 100
