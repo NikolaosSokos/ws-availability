@@ -16,7 +16,9 @@ def get_mongo_client():
         settings.mongodb_port,
         username=settings.mongodb_usr,
         password=settings.mongodb_pwd,
-        authSource=settings.mongodb_name
+        authSource=settings.mongodb_name,
+        maxPoolSize=1,
+        connect=False
     )
 
 def run_etl(networks=".*", stations=".*", start_date=None, end_date=None, days_back=1):
