@@ -11,7 +11,7 @@ class Config:
     RUNMODE = "production"
 
     # WFCatalog MongoDB
-    MONGODB_HOST = "172.17.42.1" # User must change this to their gateway IP if using Docker
+    MONGODB_HOST = "localhost" # User must change this to their gateway IP if using Docker
     MONGODB_PORT = 27017
     MONGODB_USR = "wfrepouser"
     MONGODB_PWD = "2023wf"
