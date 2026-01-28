@@ -22,6 +22,23 @@ logging.basicConfig(format=FMT, level=LOGLEVEL)
 # settings.model_dump() requires pydantic V2
 app.config.from_mapping(settings.model_dump())
 
+# ZERO-CONFIG FIX: Auto-detect Docker Gateway if MONGODB_HOST is localhost
+# This allows the app to work on old Docker versions without manual config.
+if app.config.get("MONGODB_HOST") == "localhost":
+    try:
+        import socket, struct
+        with open("/proc/net/route") as fh:
+            for line in fh:
+                fields = line.strip().split()
+                if fields[1] != '00000000' or not int(fields[3], 16) & 2:
+                    continue
+                gateway = socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
+                app.config["MONGODB_HOST"] = gateway
+                print(f"Auto-detected Docker Gateway: {gateway}")
+                break
+    except Exception as e:
+        print(f"Gateway detection failed: {e}")
+
 if app.config.get("runmode"):
     app.logger.debug("Configuration set with RUNMODE=%s", app.config["runmode"])
 
