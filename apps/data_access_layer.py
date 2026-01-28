@@ -235,11 +235,20 @@ def select_columns(
     if params["format"] == "request":
         indexes = [0, 1, 2, 3] + [START, END]
 
+    valid_data = []
     for row in data:
+        # Clip time ranges to query window, but ensure we don't create invalid segments
+        # where end time is before start time
         if params["start"] and row[START] < params["start"]:
             row[START] = params["start"]
         if params["end"] and row[END] > params["end"]:
             row[END] = params["end"]
+        
+        # After clipping, ensure start is still before end
+        # If not, this segment is outside the query window and should be skipped
+        if row[START] >= row[END]:
+            continue
+            
         row[START] = row[START].isoformat(timespec="microseconds") + "Z"
         row[END] = row[END].isoformat(timespec="microseconds") + "Z"
 
@@ -250,9 +259,11 @@ def select_columns(
             row[:] = [str(row[i]) for i in indexes]
         else:
             row[:] = [row[i] for i in indexes]
+        
+        valid_data.append(row)
 
     logging.debug(f"Columns selection in {tictac(tic)} seconds.")
-    return data
+    return valid_data
 
 
 def fusion(

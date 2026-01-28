@@ -112,10 +112,10 @@ class QueryParameters(BaseModel):
     @field_validator('mergegaps')
     @classmethod
     def validate_mergegaps(cls, v: Optional[float]) -> Optional[float]:
-        # Original: is_valid_float(dimension, mini=sys.float_info.epsilon, maxi=sys.float_info.max)
+        # mergegaps must be non-negative (0.0 is valid for merging exactly adjacent segments)
         if v is not None:
-             if v < sys.float_info.epsilon:
-                 raise ValueError("Internal Server Error") # As per tests/code behavior for negative/zero? check utils
+             if v < 0:
+                 raise ValueError("mergegaps must be non-negative")
         return v
 
     @field_validator('includerestricted', mode='before')
