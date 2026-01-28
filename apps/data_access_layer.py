@@ -421,9 +421,10 @@ def get_output(param_dic_list: list[dict]) -> Any:
 
         indexes = get_indexes(params)
         
-        # Sort by NSLC + Quality + SampleRate + StartTime to ensure fusion works correctly
+        # Sort by NSLC + StartTime + Quality + SampleRate to ensure fusion works correctly in time order
         # This fixes issues where out-of-order segments caused data loss or failed merges
-        data.sort(key=lambda x: (x[0], x[1], x[2], x[3], x[4], x[5], x[START]))
+        # and ensures that when merging across Qualities, the metadata of the earliest segment is preserved.
+        data.sort(key=lambda x: (x[0], x[1], x[2], x[3], x[START], x[4], x[5]))
 
         if params["mergegaps"] is not None or params["extent"] or "overlap" in params["merge"]:
              data = fusion(params, data, indexes)
