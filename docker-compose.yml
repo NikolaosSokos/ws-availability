@@ -35,8 +35,7 @@ services:
       nproc: 65535
     security_opt:
       - seccomp:unconfined
-    extra_hosts:
-      - "host.docker.internal:${DOCKER_GATEWAY_HOST:-172.17.0.1}"
+
   api:
     build:
       context: ./
@@ -65,8 +64,6 @@ services:
       nproc: 65535
     security_opt:
       - seccomp:unconfined
-    extra_hosts:
-      - "host.docker.internal:${DOCKER_GATEWAY_HOST:-172.17.0.1}"
 
   worker:
     build:
@@ -86,5 +83,3 @@ services:
       MONGODB_NAME: wfrepo
     ulimits:
       nproc: 65535
-    extra_hosts:
-      - "host.docker.internal:${DOCKER_GATEWAY_HOST:-172.17.0.1}"
