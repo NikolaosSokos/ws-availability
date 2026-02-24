@@ -38,19 +38,34 @@ def before_send(event, hint):
                     if isinstance(item, dict):
                         scrub_dict(item)
     
-    # Scrub request data
+    # Scrub request data (including IP headers)
     if "request" in event:
         scrub_dict(event["request"])
-    
+        if "headers" in event["request"]:
+            headers = event["request"]["headers"]
+            # Remove common IP headers
+            for ip_header in ["X-Forwarded-For", "X-Real-Ip", "True-Client-Ip", "Cf-Connecting-Ip"]:
+                if ip_header in headers:
+                    headers[ip_header] = "[Filtered]"
+                # also check lowercase since headers are often lowercase
+                if ip_header.lower() in headers:
+                    headers[ip_header.lower()] = "[Filtered]"
+        
+        # Sometimes IP is in env
+        if "env" in event["request"] and "REMOTE_ADDR" in event["request"]["env"]:
+             event["request"]["env"]["REMOTE_ADDR"] = "[Filtered]"
+
     # Scrub extra context
     if "extra" in event:
         scrub_dict(event["extra"])
     
-    # Scrub user context
-    if "user" in event:
-        scrub_dict(event["user"])
-        # Explicitly remove IP address to disable geolocation (GDPR)
-        event["user"].pop("ip_address", None)
+    # Aggressively clear user IP
+    if "user" not in event or event["user"] is None:
+        event["user"] = {}
+    
+    # Explicitly set IP to a generic value so Sentry doesn't try to auto-fill it
+    event["user"]["ip_address"] = "0.0.0.0"
+    scrub_dict(event["user"])
     
     # Scrub breadcrumbs
     if "breadcrumbs" in event:
