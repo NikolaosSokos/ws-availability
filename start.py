@@ -49,6 +49,8 @@ def before_send(event, hint):
     # Scrub user context
     if "user" in event:
         scrub_dict(event["user"])
+        # Explicitly remove IP address to disable geolocation (GDPR)
+        event["user"].pop("ip_address", None)
     
     # Scrub breadcrumbs
     if "breadcrumbs" in event:
@@ -71,8 +73,8 @@ if Config.SENTRY_DSN:
     sentry_sdk.init(
         dsn=Config.SENTRY_DSN,
         traces_sample_rate=Config.SENTRY_TRACES_SAMPLE_RATE,
-        # Add data like request headers and IP for users
-        send_default_pii=True,
+        # Disable default PII collection (IP, headers, cookies) for GDPR compliance
+        send_default_pii=False,
         # Scrub sensitive data before sending
         before_send=before_send,
     )
