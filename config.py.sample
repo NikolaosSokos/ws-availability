@@ -18,6 +18,7 @@ class Config:
         MONGODB_USR = ""
         MONGODB_PWD = ""
         MONGODB_NAME = "wfrepo"
+        MONGODB_AUTH_SOURCE = "wfrepo"
         # FDSNWS-Station cache source
         FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
         # Cache host (localhost or container name)
@@ -26,6 +27,10 @@ class Config:
         CACHE_INVENTORY_KEY = "inventory"
         CACHE_INVENTORY_PERIOD = 0
         CACHE_RESP_PERIOD = 1200
+        # Sentry configuration (optional, leave empty to disable)
+        SENTRY_DSN = ""
+        SENTRY_ENVIRONMENT = "production"
+        SENTRY_TRACES_SAMPLE_RATE = 1.0
     elif RUNMODE == "test":
         # WFCatalog MongoDB
         MONGODB_HOST = "localhost"
@@ -33,6 +38,7 @@ class Config:
         MONGODB_USR = ""
         MONGODB_PWD = ""
         MONGODB_NAME = "wfrepo"
+        MONGODB_AUTH_SOURCE = "wfrepo"
         # FDSNWS-Station cache source
         FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
         # Cache host (localhost or container name)
@@ -41,6 +47,10 @@ class Config:
         CACHE_INVENTORY_KEY = "inventory"
         CACHE_INVENTORY_PERIOD = 0
         CACHE_RESP_PERIOD = 1200
+        # Sentry configuration (optional, leave empty to disable)
+        SENTRY_DSN = ""
+        SENTRY_ENVIRONMENT = "test"
+        SENTRY_TRACES_SAMPLE_RATE = 1.0
 
     try:
         MONGODB_HOST = os.environ.get("MONGODB_HOST") or MONGODB_HOST
@@ -48,6 +58,7 @@ class Config:
         MONGODB_USR = os.environ.get("MONGODB_USR") or MONGODB_USR
         MONGODB_PWD = os.environ.get("MONGODB_PWD") or MONGODB_PWD
         MONGODB_NAME = os.environ.get("MONGODB_NAME") or MONGODB_NAME
+        MONGODB_AUTH_SOURCE = os.environ.get("MONGODB_AUTH_SOURCE") or MONGODB_AUTH_SOURCE
         FDSNWS_STATION_URL = os.environ.get("FDSNWS_STATION_URL") or FDSNWS_STATION_URL
         CACHE_HOST = os.environ.get("CACHE_HOST") or CACHE_HOST
         CACHE_PORT = os.environ.get("CACHE_PORT") or CACHE_PORT
@@ -61,9 +72,10 @@ class Config:
             os.environ.get("CACHE_SHORT_INV_PERIOD") or CACHE_RESP_PERIOD
         )
         # Sentry configuration (optional)
-        SENTRY_DSN = os.environ.get("SENTRY_DSN") or ""
+        SENTRY_DSN = os.environ.get("SENTRY_DSN") or SENTRY_DSN
+        SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT") or SENTRY_ENVIRONMENT
         SENTRY_TRACES_SAMPLE_RATE = float(
-            os.environ.get("SENTRY_TRACES_SAMPLE_RATE") or "1.0"
+            os.environ.get("SENTRY_TRACES_SAMPLE_RATE") or SENTRY_TRACES_SAMPLE_RATE
         )
     except NameError:
         print("Missing environment variables.")

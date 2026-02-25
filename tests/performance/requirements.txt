@@ -1,0 +1,16 @@
+# Performance Testing Dependencies
+
+# Core profiling tools
+line-profiler>=4.0.0
+memory-profiler>=0.61.0
+
+# Load testing
+locust>=2.15.0
+
+# Monitoring
+flask-profiler>=1.8.1
+prometheus-flask-exporter>=0.22.0
+
+# Analysis
+matplotlib>=3.7.0
+pandas>=2.0.0

@@ -12,24 +12,88 @@
 
 Following implementation requires MongoDB v4.2 or higher.
 
+## Installation
+
+Choose one of the following methods to install or run the `ws-availability` package:
+
+### Option A: Quick Run (via uvx)
+
+You can run the tool instantly without a manual installation using `uvx`:
+
+```bash
+uvx ws-availability
+```
+
+### Option B: Install via PyPI
+
+You can install the package globally or within an environment.
+
+**Using uv (if in a uv project):**
+```bash
+uv add ws-availability
+```
+
+**Using pip:**
+```bash
+pip install ws-availability
+```
+
+### Option C: Install via GitHub Releases
+
+1. Visit the [Releases](https://github.com/EIDA/ws-availability/releases) page of the GitHub repository.
+2. Download the latest stable version (e.g., the `.zip` or `.tar.gz` asset).
+3. Extract the archive and navigate into the directory via the terminal:
+
+    ```bash
+    tar -xzf ws-availability-*.tar.gz
+    cd ws-availability-*
+    ```
+
+4. Install the dependencies (we recommend using `uv` for faster installation):
+
+    **Using uv:**
+    ```bash
+    uv pip install -r requirements.txt
+    ```
+
+    **Using pip:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Configuration
+
+Sentry is used for error tracking and performance monitoring. To configure Sentry, update the corresponding variables in your `config.py` file:
+
+- `SENTRY_DSN`: The Data Source Name for the project.
+- `SENTRY_ENVIRONMENT`: The environment where the application is running (e.g., `production`, `staging`).
+
 ## Deployment
 
 1. Clone the [https://github.com/EIDA/ws-availability] repository and go to its root
 1. Copy `config.py.sample` to `config.py` and adjust it as needed (please notice there are two sections - `RUNMODE == "production"` and `RUNMODE == "test"`; for Docker deployment use the `production` section):
 
-    ```bash
-    # WFCatalog MongoDB
-    MONGODB_HOST = "localhost" #MongoDB host
-    MONGODB_PORT = 27017 #MongoDB port
-    MONGODB_USR = "" #MongoDB user
-    MONGODB_PWD = "" #MongoDB password
-    MONGODB_NAME = "wfrepo" #MongoDB database name
-    FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query" #FDSNWS-Station endpoint to harvest restriction information from
-    CACHE_HOST = "localhost" #Cache host
-    CACHE_PORT = 6379 #Cache port
-    CACHE_INVENTORY_KEY = "inventory" #Cache key for restriction information
-    CACHE_INVENTORY_PERIOD = 0 #Cache invalidation period for `inventory` key; 0 = never invalidate
-    CACHE_RESP_PERIOD = 1200 #Cache invalidation period for API response
+    ```python
+    if RUNMODE == "production":
+        # WFCatalog MongoDB
+        MONGODB_HOST = "host.docker.internal"
+        MONGODB_PORT = 27017
+        MONGODB_USR = ""
+        MONGODB_PWD = ""
+        MONGODB_NAME = "wfrepo"
+        MONGODB_AUTH_SOURCE = "admin" # Change to 'wfrepo' if your user is not in the admin db
+        # FDSNWS-Station cache source
+        FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
+        # Cache host (localhost or container name)
+        CACHE_HOST = "cache"
+        CACHE_PORT = 6379
+        CACHE_INVENTORY_KEY = "inventory"
+        CACHE_INVENTORY_PERIOD = 0
+        CACHE_RESP_PERIOD = 1200
+        # Sentry configuration (optional, leave empty to disable)
+        SENTRY_DSN = ""
+        SENTRY_ENVIRONMENT = "production"
+        SENTRY_TRACES_SAMPLE_RATE = 1.0
     ```
 
 1. Build the containers:
