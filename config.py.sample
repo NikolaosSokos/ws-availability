@@ -1,38 +1,19 @@
 import os
 
-
 class Config:
-
-    """
-    Configure Flask application from environment vars.
-    Preconfigured values are set from: RUNMODE=test or RUNMODE=production
-    Each parameter can be overriden directly by an environment variable.
-    """
-
-    RUNMODE = os.environ.get("RUNMODE")
-
-    if RUNMODE == "production":
-        # WFCatalog MongoDB
-        MONGODB_HOST = "host.docker.internal"
-        MONGODB_PORT = 27017
-        MONGODB_USR = ""
-        MONGODB_PWD = ""
-        MONGODB_NAME = "wfrepo"
-        # FDSNWS-Station cache source
-        FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
-        # Cache host (localhost or container name)
-        CACHE_HOST = "cache"
-        CACHE_PORT = 6379
-        CACHE_INVENTORY_KEY = "inventory"
-        CACHE_INVENTORY_PERIOD = 0
-        CACHE_RESP_PERIOD = 1200
-    elif RUNMODE == "test":
-        # WFCatalog MongoDB
+    class Test:
+        RUNMODE = "test"
+        # MongoDB
         MONGODB_HOST = "localhost"
         MONGODB_PORT = 27017
         MONGODB_USR = ""
         MONGODB_PWD = ""
         MONGODB_NAME = "wfrepo"
+        # Database where user credentials are stored.
+        # You can keep it empty or same as MONGODB_NAME if following default setup.
+        # Change this to 'admin' if your users are defined in the admin database.
+        MONGODB_AUTH_SOURCE = ""
+
         # FDSNWS-Station cache source
         FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
         # Cache host (localhost or container name)
@@ -42,29 +23,62 @@ class Config:
         CACHE_INVENTORY_PERIOD = 0
         CACHE_RESP_PERIOD = 1200
 
-    try:
-        MONGODB_HOST = os.environ.get("MONGODB_HOST") or MONGODB_HOST
-        MONGODB_PORT = os.environ.get("MONGODB_PORT") or MONGODB_PORT
-        MONGODB_USR = os.environ.get("MONGODB_USR") or MONGODB_USR
-        MONGODB_PWD = os.environ.get("MONGODB_PWD") or MONGODB_PWD
-        MONGODB_NAME = os.environ.get("MONGODB_NAME") or MONGODB_NAME
-        FDSNWS_STATION_URL = os.environ.get("FDSNWS_STATION_URL") or FDSNWS_STATION_URL
-        CACHE_HOST = os.environ.get("CACHE_HOST") or CACHE_HOST
-        CACHE_PORT = os.environ.get("CACHE_PORT") or CACHE_PORT
-        CACHE_INVENTORY_KEY = (
-            os.environ.get("CACHE_INVENTORY_KEY") or CACHE_INVENTORY_KEY
-        )
-        CACHE_INVENTORY_PERIOD = (
-            os.environ.get("CACHE_INVENTORY_PERIOD") or CACHE_INVENTORY_PERIOD
-        )
-        CACHE_RESP_PERIOD = (
-            os.environ.get("CACHE_SHORT_INV_PERIOD") or CACHE_RESP_PERIOD
-        )
-        # Sentry configuration (optional)
-        SENTRY_DSN = os.environ.get("SENTRY_DSN") or ""
-        SENTRY_TRACES_SAMPLE_RATE = float(
-            os.environ.get("SENTRY_TRACES_SAMPLE_RATE") or "1.0"
-        )
-    except NameError:
-        print("Missing environment variables.")
-        raise
+        # Sentry monitoring (optional). Leave SENTRY_DSN empty to disable.
+        SENTRY_DSN = ""
+        SENTRY_TRACES_SAMPLE_RATE = 1.0
+        # Identifies this deployment in Sentry (e.g. EIDA node code: "noa", "gfz", "orfeus").
+        SENTRY_ENVIRONMENT = "test"
+
+    class Production:
+        RUNMODE = "production"
+        # MongoDB
+        MONGODB_HOST = "host.docker.internal"
+        MONGODB_PORT = 27017
+        MONGODB_USR = ""
+        MONGODB_PWD = ""
+        MONGODB_NAME = "wfrepo"
+        # Database where user credentials are stored.
+        # You can keep it empty or same as MONGODB_NAME if following default setup.
+        # If deleted or unset, it will automatically fallback to MONGODB_NAME.
+        MONGODB_AUTH_SOURCE = ""
+
+        # FDSNWS-Station cache source
+        FDSNWS_STATION_URL = "https://orfeus-eu.org/fdsnws/station/1/query"
+        # Cache host (localhost or container name)
+        CACHE_HOST = "cache"
+        CACHE_PORT = 6379
+        CACHE_INVENTORY_KEY = "inventory"
+        CACHE_INVENTORY_PERIOD = 0
+        CACHE_RESP_PERIOD = 1200
+
+        # Sentry monitoring (optional). Leave SENTRY_DSN empty to disable.
+        SENTRY_DSN = ""
+        SENTRY_TRACES_SAMPLE_RATE = 1.0
+        # Identifies this deployment in Sentry. Set to the EIDA node code
+        # (e.g. "noa", "gfz", "orfeus") so issues and Cron check-ins are
+        # grouped per node in the Sentry UI.
+        SENTRY_ENVIRONMENT = ""
+
+    # Environment variables override
+    RUNMODE = os.environ.get("RUNMODE") or Test.RUNMODE
+    
+    # Select default based on RUNMODE
+    _default = Production if RUNMODE == "production" else Test
+    
+    MONGODB_HOST = os.environ.get("MONGODB_HOST") or _default.MONGODB_HOST
+    MONGODB_PORT = int(os.environ.get("MONGODB_PORT") or _default.MONGODB_PORT)
+    MONGODB_USR = os.environ.get("MONGODB_USR") or _default.MONGODB_USR
+    MONGODB_PWD = os.environ.get("MONGODB_PWD") or _default.MONGODB_PWD
+    MONGODB_NAME = os.environ.get("MONGODB_NAME") or _default.MONGODB_NAME
+    MONGODB_AUTH_SOURCE = os.environ.get("MONGODB_AUTH_SOURCE") or _default.MONGODB_AUTH_SOURCE
+
+    FDSNWS_STATION_URL = os.environ.get("FDSNWS_STATION_URL") or _default.FDSNWS_STATION_URL
+    CACHE_HOST = os.environ.get("CACHE_HOST") or _default.CACHE_HOST
+    CACHE_PORT = int(os.environ.get("CACHE_PORT") or _default.CACHE_PORT)
+    CACHE_INVENTORY_KEY = os.environ.get("CACHE_INVENTORY_KEY") or _default.CACHE_INVENTORY_KEY
+    CACHE_INVENTORY_PERIOD = int(os.environ.get("CACHE_INVENTORY_PERIOD") or _default.CACHE_INVENTORY_PERIOD)
+    CACHE_RESP_PERIOD = int(os.environ.get("CACHE_RESP_PERIOD") or _default.CACHE_RESP_PERIOD)
+
+    SENTRY_DSN = os.environ.get("SENTRY_DSN") or _default.SENTRY_DSN
+    SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE") or _default.SENTRY_TRACES_SAMPLE_RATE)
+    SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT") or _default.SENTRY_ENVIRONMENT

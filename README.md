@@ -360,6 +360,40 @@ For more details, see [Performance Analysis Plan](tests/performance/README.md).
 - `production`
 - `test`
 
+## Sentry monitoring
+
+The Flask API (`start.py`) and the in-app scheduler (`apps/scheduler.py`) both report errors and Cron check-ins to [Sentry](https://sentry.io) when a DSN is configured. Sentry is **disabled by default** — leave `SENTRY_DSN` empty to keep it off.
+
+Three settings (declared in `config.py` or via environment variables):
+
+| Setting | Purpose |
+|---|---|
+| `SENTRY_DSN` | Sentry project DSN. Empty string disables Sentry entirely. |
+| `SENTRY_TRACES_SAMPLE_RATE` | Fraction of transactions to sample (0.0–1.0). Lower this in production if quota is a concern. |
+| `SENTRY_ENVIRONMENT` | Free-form label that tags every event, transaction, and Cron check-in from this deployment. |
+
+### Per-node deployment (EIDA)
+
+Because ws-availability is installed on every EIDA node, set `SENTRY_ENVIRONMENT` to the node code on each install so events and Cron monitors are grouped per node in the Sentry UI:
+
+```python
+# config.py on the NOA node
+SENTRY_ENVIRONMENT = "noa"
+
+# config.py on the GFZ node
+SENTRY_ENVIRONMENT = "gfz"
+```
+
+Or via environment variable in `docker-compose.yml` / `.env`:
+
+```bash
+SENTRY_ENVIRONMENT=noa
+```
+
+In the Sentry UI, the environment dropdown at the top of every page lets you filter issues, alerts, and Cron monitor status per node. Alert rules can also be scoped to a single environment (e.g. page only when `noa-production` Cron check-ins go missing).
+
+> **Note:** the Sentry SDK auto-reads the `SENTRY_ENVIRONMENT` environment variable. If both an env var and a value in `config.py` are present, the env var wins — set it in one place only.
+
 ## Tests
 
 Tests can be executed from the respository root using following command:

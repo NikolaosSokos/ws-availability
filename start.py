@@ -87,6 +87,7 @@ def before_send(event, hint):
 if Config.SENTRY_DSN:
     sentry_sdk.init(
         dsn=Config.SENTRY_DSN,
+        environment=getattr(Config, "SENTRY_ENVIRONMENT", None) or None,
         traces_sample_rate=Config.SENTRY_TRACES_SAMPLE_RATE,
         # Disable default PII collection (IP, headers, cookies) for GDPR compliance
         send_default_pii=False,
