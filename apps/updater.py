@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from pymongo import MongoClient
 from pymongo.database import Database
 
 logger = logging.getLogger(__name__)

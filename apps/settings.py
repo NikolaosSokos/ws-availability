@@ -1,6 +1,6 @@
 import os
 from typing import Literal
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     mongodb_usr: str = Field("", alias="MONGODB_USR")
     mongodb_pwd: str = Field("", alias="MONGODB_PWD")
     mongodb_name: str = Field("wfrepo", alias="MONGODB_NAME")
+    mongodb_auth_source: str | None = Field(None, alias="MONGODB_AUTH_SOURCE")
     
     # FDSNWS-Station cache source
     fdsnws_station_url: str = Field("https://orfeus-eu.org/fdsnws/station/1/query", alias="FDSNWS_STATION_URL")
@@ -36,6 +37,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
     @model_validator(mode='after')
+    def set_auth_source_default(self):
+        """Default mongodb_auth_source to mongodb_name if not provided or empty."""
+        if not self.mongodb_auth_source:
+            self.mongodb_auth_source = self.mongodb_name
+        return self
+
+    @model_validator(mode='after')
     def set_production_defaults(self):
         """
         If RUNMODE is production, override localhost defaults with production defaults
@@ -46,13 +54,12 @@ class Settings(BaseSettings):
             # Legacy config logic: if production, DB host is host.docker.internal
             # We match this behavior if the value is currently 'localhost' (the test default)
             
-            # if self.mongodb_host == "localhost":
-            #     self.mongodb_host = "host.docker.internal"
+            if self.mongodb_host == "localhost":
+                self.mongodb_host = "host.docker.internal"
                 
             # Host networking: CACHE_HOST env var is used directly (localhost/127.0.0.1)
-            # if self.cache_host == "localhost":
-            #     self.cache_host = "cache"
-            pass 
+            if self.cache_host == "localhost":
+                self.cache_host = "cache"
 
         return self
 
@@ -67,6 +74,7 @@ def load_legacy_config():
             "MONGODB_USR": getattr(Config, "MONGODB_USR", None),
             "MONGODB_PWD": getattr(Config, "MONGODB_PWD", None),
             "MONGODB_NAME": getattr(Config, "MONGODB_NAME", None),
+            "MONGODB_AUTH_SOURCE": getattr(Config, "MONGODB_AUTH_SOURCE", None),
             "FDSNWS_STATION_URL": getattr(Config, "FDSNWS_STATION_URL", None),
             "CACHE_HOST": getattr(Config, "CACHE_HOST", None),
             "CACHE_PORT": getattr(Config, "CACHE_PORT", None),

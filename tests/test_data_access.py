@@ -69,8 +69,9 @@ class TestDataAccess(unittest.TestCase):
         
         # Mock wildcard expansion to return params as-is for simplicity
         with patch('apps.wfcatalog_client._expand_wildcards', side_effect=lambda x: x):
-            # Mock return values
-            self.mock_collection.find.return_value = ["fake_cursor"]
+            # Mock return values: find().limit() returns the fake cursor iterable
+            # (Layer 4 memory protection in wfcatalog_client.mongo_request chains .limit())
+            self.mock_collection.find.return_value.limit.return_value = ["fake_cursor"]
             self.mock_apply_restricted.return_value = ["fake_result"]
             
             # Act

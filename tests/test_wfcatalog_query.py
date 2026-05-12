@@ -119,9 +119,9 @@ class TestWFCatalogQuery(unittest.TestCase):
         }]
         
         with patch('apps.wfcatalog_client._expand_wildcards', side_effect=lambda x: x):
-            # Return both segments
-            self.mock_collection.find.return_value = [invalid_segment, valid_segment]
-            
+            # Return both segments via find().limit() (Layer 4 cursor cap)
+            self.mock_collection.find.return_value.limit.return_value = [invalid_segment, valid_segment]
+
             # Act
             queries, results = wfcatalog_client.mongo_request(params)
             

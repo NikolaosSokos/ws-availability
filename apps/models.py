@@ -99,6 +99,9 @@ class QueryParameters(BaseModel):
             return v
         if v == "currentutcday":
             return v
+        # Allow integer strings (used for duration/offset)
+        if v.isdigit():
+            return v
         # Try to parse to verify format, then return original string (or datetime obj if we prefer)
         # Original code kept it as string/datetime hybrid.
         for df in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
@@ -108,6 +111,7 @@ class QueryParameters(BaseModel):
             except ValueError:
                 pass
         raise ValueError(f"Invalid datetime format: {v}")
+
 
     @field_validator('mergegaps')
     @classmethod
